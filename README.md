@@ -58,7 +58,7 @@ Note: Setup is currently in development and may change.
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/BreatheInDust/langd.git
+git clone https://github.com/colmlenehan-gh/langd.git
 cd langd
 ```
 

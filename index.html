@@ -104,8 +104,12 @@ async function translateText() {
     });
 
     const data = await res.json();
-    document.getElementById("output").innerText =
-      data.translatedText || "Translation failed";
+if (!data.translated) {
+  document.getElementById("output").innerText =
+    "translation failed: " + (data.error || "unknown error");
+} else {
+  document.getElementById("output").innerText = data.translated;
+}
 
   } catch (err) {
     document.getElementById("output").innerText = "Translation failed";

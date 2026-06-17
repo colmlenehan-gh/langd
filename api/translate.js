@@ -1,48 +1,50 @@
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "POST only" });
   }
 
-  try {
-    const { q, source, target } = req.body;
+  const { q, source = "auto", target = "en" } = req.body;
 
-    if (!q || !target) {
-      return res.status(400).json({ error: "Missing text or target language" });
-    }
+  const endpoints = [
+    "https://libretranslate.com/translate",
+    "https://translate.argosopentech.com/translate",
+    "https://libretranslate.de/translate"
+  ];
 
-    // Call LibreTranslate (server-side, so NO CORS issues)
-    const response = await fetch("https://libretranslate.de/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        q: q,
-        source: source || "auto",
-        target: target,
-        format: "text"
-      })
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      return res.status(500).json({
-        error: "Translation service error",
-        details: text
+  for (const url of endpoints) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          q,
+          source,
+          target,
+          format: "text"
+        }),
+        timeout: 8000
       });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+
+      if (data?.translatedText) {
+        return res.status(200).json({
+          translated: data.translatedText,
+          provider: url
+        });
+      }
+
+    } catch (e) {
+      // try next endpoint
+      continue;
     }
-
-    const data = await response.json();
-
-    return res.status(200).json({
-      translatedText: data.translatedText
-    });
-
-  } catch (err) {
-    return res.status(500).json({
-      error: "Server error",
-      details: err.message
-    });
   }
+
+  return res.status(500).json({
+    error: "All translation providers failed"
+  });
 }

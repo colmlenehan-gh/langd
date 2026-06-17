@@ -7,7 +7,7 @@ langd is an open-source accessibility-focused tool designed to support users wit
 It aims to reduce communication barriers by offering simple, local-first language processing tools that can run on devices such as the Raspberry Pi.
 
 ---
-
+ 
 ## Features
 
 - Speech-to-Text (STT) support  

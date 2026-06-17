@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>langd</title>
+</head>
+
+<body style="margin:0; font-family:monospace; display:flex; justify-content:center; align-items:center; height:100vh;">
+
+<div style="width:520px;">
+
+  <h2>langd</h2>
+
+  <textarea id="input" style="width:100%; height:120px;" placeholder="Speak or type..."></textarea>
+
+  <br><br>
+
+  <button onclick="startSTT()">🎤 Start Speech</button>
+  <button onclick="stopSTT()">Stop</button>
+
+  <br><br>
+
+  <select id="langTo">
+    <option value="en">English</option>
+    <option value="fr">French</option>
+    <option value="de">German</option>
+    <option value="es">Spanish</option>
+    <option value="it">Italian</option>
+    <option value="pt">Portuguese</option>
+  </select>
+
+  <button onclick="translateText()">Translate</button>
+
+  <button onclick="speakOutput()">🔊 Speak</button>
+
+  <h3>Output</h3>
+  <div id="output" style="white-space:pre-wrap;"></div>
+
+</div>
+
+<!-- GitHub button -->
+<a href="https://github.com/colmlenehan-gh/langd/"
+   target="_blank"
+   style="
+     position:fixed;
+     bottom:10px;
+     right:10px;
+     font-family:monospace;
+     text-decoration:none;
+     border:1px solid black;
+     padding:6px;
+     background:white;
+   ">
+  GitHub
+</a>
+
+<script>
+
+let recognition;
+
+function startSTT() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("STT not supported in this browser.");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = function(event) {
+    let text = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      text += event.results[i][0].transcript;
+    }
+    document.getElementById("input").value = text;
+  };
+
+  recognition.start();
+}
+
+function stopSTT() {
+  if (recognition) recognition.stop();
+}
+
+async function translateText() {
+  const text = document.getElementById("input").value;
+  const target = document.getElementById("langTo").value;
+
+  document.getElementById("output").innerText = "Translating...";
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        q: text,
+        target: target,
+        source: "auto"
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById("output").innerText =
+      data.translatedText || "Translation failed";
+
+  } catch (err) {
+    document.getElementById("output").innerText = "Translation failed";
+    console.error(err);
+  }
+}
+
+function speakOutput() {
+  const text = document.getElementById("output").innerText;
+
+  if (!text) return;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utterance);
+}
+
+</script>
+
+</body>
+</html>

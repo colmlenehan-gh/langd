@@ -3,61 +3,54 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "POST only" });
   }
 
-  const { q, source = "auto", target = "en" } = req.body || {};
+  const { q, source = "auto", target = "en" } = req.body;
 
   if (!q) {
-    return res.status(400).json({ error: "Missing text" });
+    return res.status(400).json({ error: "Missing text (q)" });
   }
 
-  const src = source === "auto" ? "en" : source;
+  // Lingva public instances (fallback chain)
+  const endpoints = [
+    "https://lingva.ml/api/v1",
+    "https://lingva.thedaviddelta.com/api/v1",
+    "https://translate.plausibility.cloud/api/v1"
+  ];
 
-  // -----------------------------
-  // 1. TRY LINGVA (best quality)
-  // -----------------------------
-  try {
-    const lingvaUrl = `https://lingva.ml/api/v1/${src}/${target}/${encodeURIComponent(q)}`;
+  for (const base of endpoints) {
+    try {
+      const url = `${base}/${source}/${target}/${encodeURIComponent(q)}`;
 
-    const r1 = await fetch(lingvaUrl);
-    if (r1.ok) {
-      const d1 = await r1.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
-      if (d1?.translation) {
+      const response = await fetch(url, {
+        method: "GET",
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) continue;
+
+      const text = await response.text();
+
+      // Lingva returns:
+      // { translation: "..." }
+      const data = JSON.parse(text);
+
+      if (data?.translation) {
         return res.status(200).json({
-          translated: d1.translation,
-          provider: "lingva"
+          translated: data.translation,
+          provider: base
         });
       }
+
+    } catch (err) {
+      console.error("Lingva error:", base, err.message);
+      continue;
     }
-  } catch (e) {
-    // ignore and fallback
   }
 
-  // -----------------------------
-  // 2. FALLBACK: MYMEMORY
-  // -----------------------------
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-      q
-    )}&langpair=${src}|${target}`;
-
-    const r2 = await fetch(url);
-    const d2 = await r2.json();
-
-    const translated = d2?.responseData?.translatedText;
-
-    if (translated) {
-      return res.status(200).json({
-        translated,
-        provider: "mymemory"
-      });
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // -----------------------------
-  // FAIL
-  // -----------------------------
   return res.status(500).json({
     error: "All translation providers failed"
   });

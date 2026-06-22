@@ -1,0 +1,2 @@
+closed old issues for the original web version, decided to revert back to python, it works better even though it's a little harder to set up. then again, this is a developer tool.
+

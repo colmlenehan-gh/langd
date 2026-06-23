@@ -1,4 +1,4 @@
-# langd
+# langd (discontinued)
 
 **Language Audio Network Gateway Daemon (langd)**
 
